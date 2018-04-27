@@ -10,7 +10,7 @@
   },
   "scripts": {
     "test": "eslint test && mocha --compilers js:babel/register",
-    "postinstall": "npm install --save-dev babel-cli && babel -d dist src",
+    "postinstall": "npm install --save-dev babel-cli babel-plugin-transform-object-rest-spread && babel --plugins transform-object-rest-spread -d dist src",
     "prepublish": "eslint src && babel -d dist src"
   },
   "main": "dist/index.js",
