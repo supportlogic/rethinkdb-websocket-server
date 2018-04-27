@@ -10,6 +10,7 @@
   },
   "scripts": {
     "test": "eslint test && mocha --compilers js:babel/register",
+    "postinstall": "eslint src && babel -d dist src",
     "prepublish": "eslint src && babel -d dist src"
   },
   "main": "dist/index.js",
