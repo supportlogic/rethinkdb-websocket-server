@@ -122,7 +122,7 @@ function listen(_ref) {
   var wsServer = new _ws.Server({
     server: httpServer,
     path: httpPath,
-    perMessageDeflate: false });
+    perMessageDeflate: true });
   // necessary due to https://github.com/websockets/ws/issues/523
   var queryValidator = new _QueryValidator.QueryValidator({
     queryWhitelist: queryWhitelist,
