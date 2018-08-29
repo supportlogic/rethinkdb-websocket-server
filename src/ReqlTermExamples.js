@@ -53,6 +53,7 @@ export default {
   CONTAINS: r([]).contains(),
   GET_FIELD: r({}).getField(),
   KEYS: r({}).keys(),
+  VALUES: r({}).values(),
   OBJECT: r.object(),
   HAS_FIELDS: r([]).hasFields(),
   WITH_FIELDS: r([]).withFields(),
