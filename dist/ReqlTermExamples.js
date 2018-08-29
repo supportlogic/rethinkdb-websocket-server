@@ -65,6 +65,7 @@ exports['default'] = {
   CONTAINS: (0, _rethinkdb2['default'])([]).contains(),
   GET_FIELD: (0, _rethinkdb2['default'])({}).getField(),
   KEYS: (0, _rethinkdb2['default'])({}).keys(),
+  VALUES: (0, _rethinkdb2['default'])({}).values(),
   OBJECT: _rethinkdb2['default'].object(),
   HAS_FIELDS: (0, _rethinkdb2['default'])([]).hasFields(),
   WITH_FIELDS: (0, _rethinkdb2['default'])([]).withFields(),
