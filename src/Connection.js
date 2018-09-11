@@ -5,6 +5,7 @@ import net from 'net';
 import tls from 'tls';
 import protodef from 'rethinkdb/proto-def';
 import url from 'url';
+import zlib from 'zlib';
 
 // A Connection instance wraps an incoming WebSocket (likely from a browser
 // using rethinkdb-websocket-client) and an outgoing RethinkDB TCP socket. Once
@@ -52,7 +53,8 @@ export class Connection {
 
   sendWebSocketMessage(data) {
     if (this.webSocket.protocol === 'base64') {
-      const b64EncodedData = (new Buffer(data)).toString('base64');
+      // const b64EncodedData = (new Buffer(data)).toString('base64');
+      const b64EncodedData = zlib.deflateSync(new Buffer(data)).toString('base64');
       this.webSocket.send(b64EncodedData);
     } else {
       this.webSocket.send(data, {binary: true});
