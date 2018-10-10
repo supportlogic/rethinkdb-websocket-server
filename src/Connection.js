@@ -1,5 +1,5 @@
 import colors from 'colors/safe';
-import {errToString} from './util';
+import {errToString, handshakeStates} from './util';
 import moment from 'moment';
 import net from 'net';
 import tls from 'tls';
@@ -17,6 +17,7 @@ export class Connection {
     this.loggingMode = loggingMode;
     this.remoteAddress = webSocket._socket.remoteAddress;
     this.remotePort = webSocket._socket.remotePort;
+    this.handshakeState = handshakeStates.initial;
   }
 
   start({sessionCreator, dbHost, dbPort, dbAuthKey, dbSsl}) {
@@ -28,8 +29,8 @@ export class Connection {
     });
     this.dbAuthKey = dbAuthKey;
     this.wsInBuffer = new Buffer(0);
-    this.handshakeComplete = false;
     this.isClosed = false;
+    this.handshakeState = handshakeStates.initial;
     let options = {
       host: dbHost,
       port: dbPort
@@ -153,44 +154,30 @@ export class Connection {
   }
 
   validateClientHandshake(buf) {
+    // TODO: At this moment we check only for protocol version
+    // It makes more sense to also check if authBuffer JSON contains all required fields
     const protocolVersion = buf.readUInt32LE(0);
-    if (protocolVersion !== protodef.VersionDummy.Version.V0_4) {
+    if (protocolVersion !== protodef.VersionDummy.Version.V1_0) {
       this.cleanupAndLogErr('Invalid protocolVersion ' + protocolVersion);
-      return 0;
+      return false;
     }
-    const keyLength = buf.readUInt32LE(4);
-    if (keyLength !== 0) {
-      this.cleanupAndLogErr('Auth key not supported');
-      return 0;
-    }
-    const protocolType = buf.readUInt32LE(8);
-    if (protocolType !== protodef.VersionDummy.Protocol.JSON) {
-      this.cleanupAndLogErr('Protocol type not supported ' + protocolType);
-      return 0;
-    }
-    return 12;
+    return true;
   }
 
   processNextMessage(buf) {
-    if (!this.handshakeComplete) {
-      if (buf.length >= 12) {
-        const clientHandshakeLength = this.validateClientHandshake(buf);
-        if (clientHandshakeLength > 0) {
-          const authKey = this.dbAuthKey || '';
-          const outBuf = new Buffer(12 + authKey.length);
-          outBuf.writeUInt32LE(protodef.VersionDummy.Version.V0_4, 0);
-          outBuf.writeUInt32LE(authKey.length, 4);
-          outBuf.write(authKey, 8);
-          outBuf.writeUInt32LE(protodef.VersionDummy.Protocol.JSON, 8 + authKey.length);
-          this.dbSocket.write(outBuf, 'binary');
-          this.handshakeComplete = true;
-          return clientHandshakeLength;
-        } else {
-          return 0;
+    if (buf.length >= 12) {
+      if (this.handshakeState === handshakeStates.initial) {
+        const isClientHandshakeValid = this.validateClientHandshake(buf);
+        if (isClientHandshakeValid) {
+          this.dbSocket.write(buf, 'binary');
+          this.handshakeState = handshakeStates.compareDigest;
+          return buf.length;
         }
-      }
-    } else {
-      if (buf.length >= 12) {
+      } else if (this.handshakeState === handshakeStates.compareDigest) {
+        this.dbSocket.write(buf, 'binary');
+        this.handshakeState = handshakeStates.established;
+        return buf.length;
+      } else {
         const encodedQueryLength = buf.readUInt32LE(8);
         const queryEndOffset = 12 + encodedQueryLength;
         if (queryEndOffset <= buf.length) {
@@ -202,6 +189,7 @@ export class Connection {
         }
       }
     }
+
     return 0;
   }
 
