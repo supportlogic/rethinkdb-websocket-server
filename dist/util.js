@@ -52,4 +52,19 @@ exports.repeatString = repeatString;
 var errToString = function errToString(e) {
   return e.stack || e.message || JSON.stringify(e);
 };
+
 exports.errToString = errToString;
+// Note for protocol V1.0:
+// Handshake operations flow from driver:
+// 1. Send version and auth info
+// 2. STATE_INITIAL: Check min-max protocols info and server auth info
+// 3. STATE_COMPUTE_SALTED_PASSWORD: Prepare and send salted password
+// 4. STATE_COMPARE_DIGEST: Get response and check if everything is ok
+// 5. STATE_ESTABLISHED: Connection is ready
+
+var handshakeStates = {
+  initial: 'STATE_INITIAL',
+  compareDigest: 'STATE_COMPARE_DIGEST',
+  established: 'STATE_ESTABLISHED'
+};
+exports.handshakeStates = handshakeStates;

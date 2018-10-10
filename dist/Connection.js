@@ -52,6 +52,7 @@ var Connection = (function () {
     this.loggingMode = loggingMode;
     this.remoteAddress = webSocket._socket.remoteAddress;
     this.remotePort = webSocket._socket.remotePort;
+    this.handshakeState = _util.handshakeStates.initial;
   }
 
   _createClass(Connection, [{
@@ -73,8 +74,8 @@ var Connection = (function () {
       });
       this.dbAuthKey = dbAuthKey;
       this.wsInBuffer = new Buffer(0);
-      this.handshakeComplete = false;
       this.isClosed = false;
+      this.handshakeState = _util.handshakeStates.initial;
       var options = {
         host: dbHost,
         port: dbPort
@@ -212,47 +213,33 @@ var Connection = (function () {
   }, {
     key: 'validateClientHandshake',
     value: function validateClientHandshake(buf) {
+      // TODO: At this moment we check only for protocol version
+      // It makes more sense to also check if authBuffer JSON contains all required fields
       var protocolVersion = buf.readUInt32LE(0);
-      if (protocolVersion !== _rethinkdbProtoDef2['default'].VersionDummy.Version.V0_4) {
+      if (protocolVersion !== _rethinkdbProtoDef2['default'].VersionDummy.Version.V1_0) {
         this.cleanupAndLogErr('Invalid protocolVersion ' + protocolVersion);
-        return 0;
+        return false;
       }
-      var keyLength = buf.readUInt32LE(4);
-      if (keyLength !== 0) {
-        this.cleanupAndLogErr('Auth key not supported');
-        return 0;
-      }
-      var protocolType = buf.readUInt32LE(8);
-      if (protocolType !== _rethinkdbProtoDef2['default'].VersionDummy.Protocol.JSON) {
-        this.cleanupAndLogErr('Protocol type not supported ' + protocolType);
-        return 0;
-      }
-      return 12;
+      return true;
     }
   }, {
     key: 'processNextMessage',
     value: function processNextMessage(buf) {
       var _this5 = this;
 
-      if (!this.handshakeComplete) {
-        if (buf.length >= 12) {
-          var clientHandshakeLength = this.validateClientHandshake(buf);
-          if (clientHandshakeLength > 0) {
-            var authKey = this.dbAuthKey || '';
-            var outBuf = new Buffer(12 + authKey.length);
-            outBuf.writeUInt32LE(_rethinkdbProtoDef2['default'].VersionDummy.Version.V0_4, 0);
-            outBuf.writeUInt32LE(authKey.length, 4);
-            outBuf.write(authKey, 8);
-            outBuf.writeUInt32LE(_rethinkdbProtoDef2['default'].VersionDummy.Protocol.JSON, 8 + authKey.length);
-            this.dbSocket.write(outBuf, 'binary');
-            this.handshakeComplete = true;
-            return clientHandshakeLength;
-          } else {
-            return 0;
+      if (buf.length >= 12) {
+        if (this.handshakeState === _util.handshakeStates.initial) {
+          var isClientHandshakeValid = this.validateClientHandshake(buf);
+          if (isClientHandshakeValid) {
+            this.dbSocket.write(buf, 'binary');
+            this.handshakeState = _util.handshakeStates.compareDigest;
+            return buf.length;
           }
-        }
-      } else {
-        if (buf.length >= 12) {
+        } else if (this.handshakeState === _util.handshakeStates.compareDigest) {
+          this.dbSocket.write(buf, 'binary');
+          this.handshakeState = _util.handshakeStates.established;
+          return buf.length;
+        } else {
           var encodedQueryLength = buf.readUInt32LE(8);
           var queryEndOffset = 12 + encodedQueryLength;
           if (queryEndOffset <= buf.length) {
@@ -264,6 +251,7 @@ var Connection = (function () {
           }
         }
       }
+
       return 0;
     }
   }, {
