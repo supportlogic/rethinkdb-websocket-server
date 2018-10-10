@@ -29,3 +29,17 @@ export const ensure = (value, msg) => {
 export const repeatString = (s, n) => new Array(n + 1).join(s);
 
 export const errToString = e => e.stack || e.message || JSON.stringify(e);
+
+// Note for protocol V1.0:
+// Handshake operations flow from driver:
+// 1. Send version and auth info
+// 2. STATE_INITIAL: Check min-max protocols info and server auth info
+// 3. STATE_COMPUTE_SALTED_PASSWORD: Prepare and send salted password
+// 4. STATE_COMPARE_DIGEST: Get response and check if everything is ok
+// 5. STATE_ESTABLISHED: Connection is ready
+
+export const handshakeStates = {
+  initial: 'STATE_INITIAL',
+  compareDigest: 'STATE_COMPARE_DIGEST',
+  established: 'STATE_ESTABLISHED'
+};
