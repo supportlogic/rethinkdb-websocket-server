@@ -153,22 +153,14 @@ export class Connection {
   }
 
   validateClientHandshake(buf) {
+    // TODO: At this moment we check only for protocol version
+    // It makes more sense to also check if authBuffer JSON contains all required fields
     const protocolVersion = buf.readUInt32LE(0);
-    if (protocolVersion !== protodef.VersionDummy.Version.V0_4) {
+    if (protocolVersion !== protodef.VersionDummy.Version.V1_0) {
       this.cleanupAndLogErr('Invalid protocolVersion ' + protocolVersion);
-      return 0;
+      return false;
     }
-    const keyLength = buf.readUInt32LE(4);
-    if (keyLength !== 0) {
-      this.cleanupAndLogErr('Auth key not supported');
-      return 0;
-    }
-    const protocolType = buf.readUInt32LE(8);
-    if (protocolType !== protodef.VersionDummy.Protocol.JSON) {
-      this.cleanupAndLogErr('Protocol type not supported ' + protocolType);
-      return 0;
-    }
-    return 12;
+    return true;
   }
 
   processNextMessage(buf) {
