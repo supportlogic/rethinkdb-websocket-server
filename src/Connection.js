@@ -11,18 +11,19 @@ import url from 'url';
 // start() is called, it will forward traffic in both directions until either
 // side disconnects. Each incoming WebSocket spawns a new outgoing TCP socket.
 export class Connection {
-  constructor(queryValidator, webSocket, loggingMode) {
+  constructor(queryValidator, webSocket, loggingMode, httpInfoMsg) {
     this.queryValidator = queryValidator;
     this.webSocket = webSocket;
     this.loggingMode = loggingMode;
     this.remoteAddress = webSocket._socket.remoteAddress;
     this.remotePort = webSocket._socket.remotePort;
     this.handshakeState = handshakeStates.initial;
+    this.httpInfoMsg = httpInfoMsg;
   }
 
   start({sessionCreator, dbHost, dbPort, dbAuthKey, dbSsl}) {
-    const urlQueryParams = url.parse(this.webSocket.upgradeReq.url, true).query;
-    const req = this.webSocket.upgradeReq;
+    const urlQueryParams = url.parse(this.httpInfoMsg.url, true).query;
+    const req = this.httpInfoMsg;
     this.sessionPromise = sessionCreator(urlQueryParams, req).catch(e => {
       this.sendWebSocketMessage('rethinkdb-websocket-server session rejected\0');
       this.cleanupAndLogErr('Error in sessionCreator', e);

@@ -76,8 +76,8 @@ export function listen({
     unsafelyAllowAnyQuery,
     loggingMode,
   });
-  wsServer.on('connection', webSocket => {
-    const connection = new Connection(queryValidator, webSocket, loggingMode);
+  wsServer.on('connection', (webSocket, req) => {
+    const connection = new Connection(queryValidator, webSocket, loggingMode, req);
     connection.start({sessionCreator, dbHost, dbPort, dbAuthKey, dbSsl});
   });
   return wsServer;
