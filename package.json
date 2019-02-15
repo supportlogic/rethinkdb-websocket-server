@@ -31,5 +31,8 @@
     "mocha": "^2.2.5",
     "reqlite": "^2.0.4",
     "rethinkdb-websocket-client": "^0.4.5"
+  },
+  "optionalDependencies": {
+    "bufferutil": "^4.0.1"
   }
 }
